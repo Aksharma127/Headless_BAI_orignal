@@ -1,0 +1,31 @@
+venv/
+__pycache__/
+.env
+.env.*
+!.env.example
+*.pyc
+.DS_Store
+node_modules/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+logs/
+outputs/
+out/
+
+# Local Chromium checkout/build artifacts are far too large for the project repo.
+# Keep Chromium changes as patch files in chromium-patches/.
+chromium-main/
+!chromium-patches/
+!chromium-patches/**
+
+# Local generated analysis/output folders.
+evaluation_report/
+computational_pipeline/
+clean_layout.json
+
+# Local sanitized repository assembled for upload.
+release_repo/

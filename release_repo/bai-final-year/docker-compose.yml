@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=True
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    volumes:
+      - ./backend:/app
+      - playwright_browsers:/ms-playwright
+    depends_on:
+      - redis
+      - playwright
+    command: >
+      sh -c "pip install -r requirements.txt &&
+             python main.py"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    image: python:3.11-slim
+    working_dir: /app/frontend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./frontend:/app/frontend
+    command: python -m http.server 5000 --directory demo-website
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  playwright:
+    image: mcr.microsoft.com/playwright/python:v1.52.0-jammy
+    command: >
+      sh -c "playwright install chromium && tail -f /dev/null"
+    volumes:
+      - playwright_browsers:/ms-playwright
+
+volumes:
+  backend:
+  redis_data:
+  playwright_browsers:

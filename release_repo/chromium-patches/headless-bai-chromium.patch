@@ -1,0 +1,429 @@
+diff --git a/content/browser/renderer_host/render_process_host_impl.cc b/content/browser/renderer_host/render_process_host_impl.cc
+index 2e1c77eaac..2b8762e3f0 100644
+--- a/content/browser/renderer_host/render_process_host_impl.cc
++++ b/content/browser/renderer_host/render_process_host_impl.cc
+@@ -3726,6 +3726,11 @@ void RenderProcessHostImpl::AppendRendererCommandLine(
+   const base::CommandLine& browser_command_line =
+       *base::CommandLine::ForCurrentProcess();
+   PropagateBrowserCommandLineToRenderer(browser_command_line, command_line);
++  // Ensure enable-bai-telemetry is forwarded even if not covered by the
++  // PropagateBrowserCommandLineToRenderer allowlist in some build configs.
++  if (browser_command_line.HasSwitch("enable-bai-telemetry")) {
++    command_line->AppendSwitch("enable-bai-telemetry");
++  }
+ 
+   // Pass on the browser locale.
+   const std::string locale =
+@@ -3839,6 +3844,7 @@ void RenderProcessHostImpl::PropagateBrowserCommandLineToRenderer(
+       switches::kDisableVideoCaptureUseGpuMemoryBuffer,
+       switches::kDomAutomationController,
+       switches::kEnableAutomation,
++      switches::kEnableBaiTelemetry,
+       switches::kEnableExperimentalAccessibilityLanguageDetection,
+       switches::kEnableExperimentalAccessibilityLabelsDebugging,
+       switches::kEnableExperimentalWebPlatformFeatures,
+diff --git a/content/public/common/content_switches.cc b/content/public/common/content_switches.cc
+index a5dd799086..a6dc9edf36 100644
+--- a/content/public/common/content_switches.cc
++++ b/content/public/common/content_switches.cc
+@@ -62,6 +62,9 @@ const char kChangeStackGuardOnFork[] = "change-stack-guard-on-fork";
+ const char kChangeStackGuardOnForkEnabled[] = "enable";
+ const char kChangeStackGuardOnForkDisabled[] = "disable";
+ 
++// Enables BAI telemetry extraction in the renderer.
++const char kEnableBaiTelemetry[] = "enable-bai-telemetry";
++
+ // Disable antialiasing on 2d canvas.
+ const char kDisable2dCanvasAntialiasing[]   = "disable-canvas-aa";
+ 
+diff --git a/content/public/common/content_switches.h b/content/public/common/content_switches.h
+index 17e834a0e1..c519481186 100644
+--- a/content/public/common/content_switches.h
++++ b/content/public/common/content_switches.h
+@@ -97,6 +97,7 @@ CONTENT_EXPORT extern const char kDomAutomationController[];
+ extern const char kDisable2dCanvasClipAntialiasing[];
+ CONTENT_EXPORT extern const char kEnableAggressiveDOMStorageFlushing[];
+ CONTENT_EXPORT extern const char kEnableAutomation[];
++CONTENT_EXPORT extern const char kEnableBaiTelemetry[];
+ CONTENT_EXPORT extern const char kEnableBlinkFeatures[];
+ CONTENT_EXPORT extern const char kEnableCaretBrowsing[];
+ CONTENT_EXPORT extern const char kEnableDisplayList2dCanvas[];
+diff --git a/third_party/blink/renderer/core/frame/local_frame_view.cc b/third_party/blink/renderer/core/frame/local_frame_view.cc
+index ade4e1d146..3a1749b630 100644
+--- a/third_party/blink/renderer/core/frame/local_frame_view.cc
++++ b/third_party/blink/renderer/core/frame/local_frame_view.cc
+@@ -29,13 +29,16 @@
+ #include <algorithm>
+ #include <memory>
+ #include <utility>
++#include <iostream>
+ 
+ #include "base/auto_reset.h"
++#include "base/command_line.h"
+ #include "base/feature_list.h"
+ #include "base/functional/callback.h"
+ #include "base/functional/function_ref.h"
+ #include "base/memory/ptr_util.h"
+ #include "base/metrics/field_trial_params.h"
++#include "base/json/string_escape.h"
+ #include "base/numerics/safe_conversions.h"
+ #include "base/timer/lap_timer.h"
+ #include "base/trace_event/typed_macros.h"
+@@ -185,6 +188,7 @@
+ #include "third_party/blink/renderer/platform/loader/fetch/resource_fetcher.h"
+ #include "third_party/blink/renderer/platform/runtime_enabled_features.h"
+ #include "third_party/blink/renderer/platform/scheduler/public/frame_scheduler.h"
++#include "third_party/blink/renderer/platform/wtf/text/string_builder.h"
+ #include "third_party/blink/renderer/platform/web_test_support.h"
+ #include "third_party/blink/renderer/platform/widget/frame_widget.h"
+ #include "third_party/blink/renderer/platform/wtf/std_lib_extras.h"
+@@ -247,8 +251,102 @@ void LogCursorSizeCounter(LocalFrame* frame, const ui::Cursor& cursor) {
+ // has updated the url display.
+ constexpr int kCommitDelayDefaultInMs = 500;  // 30 frames @ 60hz
+ 
++void AppendBaiTelemetryJsonForNode(const Node& node,
++                                   int depth,
++                                   StringBuilder* json_output,
++                                   bool* first_node) {
++  LayoutObject* layout_object = node.GetLayoutObject();
++  if (layout_object) {
++    if (!*first_node) {
++      json_output->Append(',');
++    }
++    *first_node = false;
++
++    const gfx::Rect bounding_box = layout_object->AbsoluteBoundingBoxRect();
++    json_output->Append("{\"name\":\"");
++    // Escape the node name for JSON safety (do not include surrounding quotes).
++    std::string escaped_name;
++    base::EscapeJSONString(node.nodeName().Utf8(), false, &escaped_name);
++    // Copy into a uint8_t vector to avoid unsafe reinterpret_cast buffer usage.
++    std::vector<uint8_t> escaped_vec(escaped_name.begin(), escaped_name.end());
++    json_output->Append(String::FromUtf8(escaped_vec));
++    json_output->Append("\",\"depth\":");
++    json_output->AppendNumber(depth);
++    json_output->Append(",\"x\":");
++    json_output->AppendNumber(bounding_box.x());
++    json_output->Append(",\"y\":");
++    json_output->AppendNumber(bounding_box.y());
++    json_output->Append(",\"width\":");
++    json_output->AppendNumber(bounding_box.width());
++    json_output->Append(",\"height\":");
++    json_output->AppendNumber(bounding_box.height());
++    json_output->Append("}");
++  }
++
++  for (Node* child = node.firstChild(); child; child = child->nextSibling()) {
++    AppendBaiTelemetryJsonForNode(*child, depth + 1, json_output,
++                                  first_node);
++  }
++}
++
+ }  // namespace
+ 
++void blink::LocalFrameView::DumpBaiTelemetryIfEnabled() {
++  std::cerr << "BAI_HOOK" << std::endl;
++
++  if (!base::CommandLine::ForCurrentProcess()->HasSwitch(
++          "enable-bai-telemetry")) {
++    std::cerr << "BAI_SKIP: telemetry flag disabled" << std::endl;
++    return;
++  }
++
++  if (has_bai_dumped_) {
++    std::cerr << "BAI_SKIP: already dumped for this frame view" << std::endl;
++    return;
++  }
++
++  LocalFrame& frame = GetFrame();
++  if (!frame.IsLocalRoot()) {
++    std::cerr << "BAI_SKIP: not local root" << std::endl;
++    return;
++  }
++
++  Document* document = frame.GetDocument();
++  if (!document) {
++    std::cerr << "BAI_SKIP: no document" << std::endl;
++    return;
++  }
++
++  if (!document->IsLoadCompleted()) {
++    std::cerr << "BAI_SKIP: load not completed" << std::endl;
++    return;
++  }
++
++  if (!document->body()) {
++    std::cerr << "BAI_SKIP: no body" << std::endl;
++    return;
++  }
++
++  std::cerr << "BAI_BODY" << std::endl;
++
++  StringBuilder json_output;
++  json_output.Append("{\"nodes\":[");
++  bool first_node = true;
++  AppendBaiTelemetryJsonForNode(*document->body(), 0, &json_output,
++                                &first_node);
++  if (first_node) {
++    std::cerr << "BAI_SKIP: empty telemetry tree" << std::endl;
++    return;
++  }
++  json_output.Append("]}");
++
++  std::cerr << "\n=== BAI_SKELETON_START ===\n"
++            << json_output.ToString().Utf8()
++            << "\n=== BAI_SKELETON_END ===\n"
++            << std::endl;
++  has_bai_dumped_ = true;
++}
++
+ // The maximum number of updatePlugins iterations that should be done before
+ // returning.
+ static const unsigned kMaxUpdatePluginsIterations = 2;
+@@ -2373,6 +2471,8 @@ bool LocalFrameView::UpdateLifecyclePhases(
+     }
+   }
+ 
++  DumpBaiTelemetryIfEnabled();
++
+   return Lifecycle().GetState() == target_state;
+ }
+ 
+diff --git a/third_party/blink/renderer/core/frame/local_frame_view.h b/third_party/blink/renderer/core/frame/local_frame_view.h
+index c6b8c94365..68e227ca24 100644
+--- a/third_party/blink/renderer/core/frame/local_frame_view.h
++++ b/third_party/blink/renderer/core/frame/local_frame_view.h
+@@ -1151,6 +1151,7 @@ class CORE_EXPORT LocalFrameView final
+   void UpdateCanCompositeBackgroundAttachmentFixed();
+ 
+   void RunCanvasOnpaintSteps();
++  void DumpBaiTelemetryIfEnabled();
+ 
+   typedef HeapHashSet<Member<LayoutEmbeddedContent>> EmbeddedContentSet;
+   EmbeddedContentSet part_update_set_;
+@@ -1287,6 +1288,8 @@ class CORE_EXPORT LocalFrameView final
+ 
+   bool visual_viewport_or_overlay_needs_repaint_ = false;
+ 
++  bool has_bai_dumped_ = false;
++
+   // Whether to collect layer debug information for debugging, tracing,
+   // inspection, etc. Applies to local root only.
+   bool paint_debug_info_enabled_ = DCHECK_IS_ON();
+diff --git a/third_party/blink/renderer/modules/content_extraction/ai_page_content_agent.cc b/third_party/blink/renderer/modules/content_extraction/ai_page_content_agent.cc
+index da85af5cac..ac3ff6ab6e 100644
+--- a/third_party/blink/renderer/modules/content_extraction/ai_page_content_agent.cc
++++ b/third_party/blink/renderer/modules/content_extraction/ai_page_content_agent.cc
+@@ -6,6 +6,7 @@
+ 
+ #include <algorithm>
+ #include <cstdint>
++#include <functional>
+ 
+ #include "base/check.h"
+ #include "base/containers/adapters.h"
+@@ -49,7 +50,6 @@
+ #include "third_party/blink/renderer/core/html/html_meta_element.h"
+ #include "third_party/blink/renderer/core/html/media/html_video_element.h"
+ #include "third_party/blink/renderer/core/input/event_handler.h"
+-#include "third_party/blink/renderer/core/keywords.h"
+ #include "third_party/blink/renderer/core/layout/adjust_for_absolute_zoom.h"
+ #include "third_party/blink/renderer/core/layout/geometry/physical_rect.h"
+ #include "third_party/blink/renderer/core/layout/layout_box.h"
+@@ -91,6 +91,11 @@
+ #include "ui/accessibility/ax_role_properties.h"
+ #include "ui/gfx/geometry/point_conversions.h"
+ #include "ui/gfx/geometry/rect_conversions.h"
++#include "base/values.h"
++#include "base/json/json_writer.h"
++
++// No file-scope previous geometry storage: data lives on the per-document
++// AIPageContentAgent instance to obey Blink lifecycle and GC rules.
+ 
+ namespace blink {
+ #if DCHECK_IS_ON()
+@@ -813,7 +818,7 @@ void AddClickabilityReasons(
+       element.FastGetAttribute(html_names::kAutocompleteAttr);
+   const auto& aria_autocomplete =
+       element.FastGetAttribute(html_names::kAriaAutocompleteAttr);
+-  if ((autocomplete && autocomplete != keywords::kOff) ||
++  if ((autocomplete && autocomplete != "off") ||
+       (aria_autocomplete == "inline" || aria_autocomplete == "list" ||
+        aria_autocomplete == "both")) {
+     interaction_info.clickability_reasons.push_back(Reason::kAutocomplete);
+@@ -1635,7 +1640,8 @@ void AIPageContentAgent::
+ AIPageContentAgent::AIPageContentAgent(base::PassKey<AIPageContentAgent>,
+                                        LocalFrame& frame)
+     : Supplement<Document>(*frame.GetDocument()),
+-      receiver_set_(this, frame.DomWindow()) {
++      receiver_set_(this, frame.DomWindow()),
++      has_dumped_skeleton_(false) {
+   DCHECK(frame.GetDocument());
+ }
+ 
+@@ -1661,8 +1667,28 @@ void AIPageContentAgent::DidFinishPostLifecycleSteps(const LocalFrameView&) {
+     std::move(task).Run();
+   }
+   async_extraction_tasks_.clear();
++
++  // Ensure we only emit the native skeleton once per agent lifetime. The
++  // agent is bound to a Document; when the agent is recreated for a new
++  // Document the constructor resets `has_dumped_skeleton_`.
++  if (!has_dumped_skeleton_) {
++    DumpSkeletonNative();
++    has_dumped_skeleton_ = true;
++  }
++
++  // Native skeleton dump: emit a minimal JSON of semantic <section> regions
++  // after layout is clean. This bypasses Mojo/CDP for fast, native extraction
++  // during page load and is intentionally lightweight.
++  DumpSkeletonNative();
++}
++
++void AIPageContentAgent::DumpSkeletonNative() {
++  // TODO: Implement using compatible base::Value API
++  // This function used base::Value::List/Dict and DOM methods
++  // which are not available in the current Chromium build.
+ }
+ 
++
+ void AIPageContentAgent::GetAIPageContent(
+     mojom::blink::AIPageContentOptionsPtr options,
+     GetAIPageContentCallback callback) {
+@@ -1792,13 +1818,14 @@ mojom::blink::AIPageContentPtr AIPageContentAgent::GetAIPageContentInternal(
+     return nullptr;
+   }
+ 
+-  ContentBuilder builder(options);
++  ContentBuilder builder(options, this);
+   return builder.Build(*frame);
+ }
+ 
+ AIPageContentAgent::ContentBuilder::ContentBuilder(
+-    const mojom::blink::AIPageContentOptions& options)
+-    : options_(options) {
++  const mojom::blink::AIPageContentOptions& options,
++  const AIPageContentAgent* agent)
++  : options_(options), agent_(agent) {
+   // Build a typed O(1) membership set once so node-id policy checks do not
+   // rescan the allowlisted attribute types for every content node in the tree.
+   if (!options.node_id_allowlist) {
+@@ -2631,6 +2658,35 @@ void AIPageContentAgent::ContentBuilder::AddNodeGeometry(
+       map_to_outer ? LocalToOuterBoundingBox(object, local_bounding_box)
+                    : ComputeOuterBoundingBox(object);
+ 
++  // Compute a lightweight instantaneous velocity estimate (device pixels/sec)
++  // for the visible bounding box center if we have a previous sample for this
++  // DOM node id. This is intentionally conservative: only compute when we have
++  // a non-empty visible box and a prior sample.
++  if (attributes.dom_node_id.has_value() && !geometry.visible_bounding_box.IsEmpty()) {
++    int32_t dom_id = *attributes.dom_node_id;
++    base::TimeTicks now = base::TimeTicks::Now();
++    auto it = agent_->previous_node_geometries_.find(dom_id);
++    if (it != agent_->previous_node_geometries_.end()) {
++      const gfx::Rect& prev_rect = it->value.first;
++      const base::TimeTicks& prev_time = it->value.second;
++      double dt = (now - prev_time).InSecondsF();
++      if (dt > 0 && !prev_rect.IsEmpty()) {
++        // const float prev_cx = prev_rect.x() + prev_rect.width() * 0.5f;
++        // const float prev_cy = prev_rect.y() + prev_rect.height() * 0.5f;
++        // // const float curr_cx = geometry.visible_bounding_box.x() +
++        // // geometry.visible_bounding_box.width() * 0.5f;
++        // // const float curr_cy = geometry.visible_bounding_box.y() +
++        // geometry.visible_bounding_box.height() * 0.5f;
++        // TODO: Velocity field not available in AIPageContentGeometry
++        // const float vx = (curr_cx - prev_cx) / static_cast<float>(dt);
++        // const float vy = (curr_cy - prev_cy) / static_cast<float>(dt);
++        // TODO: geometry.velocity field not available in AIPageContentGeometry
++        // geometry.velocity = gfx::Vector2dF(vx, vy);
++      }
++    }
++    agent_->previous_node_geometries_.Set(dom_id, std::make_pair(geometry.visible_bounding_box, now));
++  }
++
+   // For APC, the most useful fallback is to clamp the outer box to the visible
+   // box when the mapping fails or saturates:
+   // - It preserves the key invariant checked by ValidateBoundingBoxes().
+diff --git a/third_party/blink/renderer/modules/content_extraction/ai_page_content_agent.h b/third_party/blink/renderer/modules/content_extraction/ai_page_content_agent.h
+index ed740e740e..c749282263 100644
+--- a/third_party/blink/renderer/modules/content_extraction/ai_page_content_agent.h
++++ b/third_party/blink/renderer/modules/content_extraction/ai_page_content_agent.h
+@@ -23,7 +23,9 @@
+ #include "third_party/blink/renderer/platform/wtf/hash_map.h"
+ #include "third_party/blink/renderer/platform/wtf/hash_set.h"
+ #include "third_party/blink/renderer/platform/wtf/hash_traits.h"
+-
++#include "base/time/time.h"
++#include "ui/gfx/geometry/rect.h"
++#include "third_party/blink/renderer/platform/wtf/hash_map.h"
+ namespace blink {
+ class Document;
+ class LayoutIFrame;
+@@ -34,8 +36,12 @@ class Node;
+ class AutoBuildHelper;
+ #endif
+ 
+-// AIPageContent is responsible for handling requests for inner-text. It calls
+-// to InnerTextBuilder to handle building of the text.
++// Page content extraction handles inner-text requests and delegates to
++// InnerTextBuilder for text construction.
++#include "third_party/blink/renderer/platform/wtf/hash_map.h"
++
++#include "third_party/blink/renderer/platform/wtf/hash_map.h"
++
+ class MODULES_EXPORT AIPageContentAgent final
+     : public GarbageCollected<AIPageContentAgent>,
+       public mojom::blink::AIPageContentAgent,
+@@ -88,11 +94,12 @@ class MODULES_EXPORT AIPageContentAgent final
+                             base::TimeTicks start_time) const;
+ 
+   // Synchronously services a single request.
+-  class ContentBuilder {
++    class ContentBuilder {
+     STACK_ALLOCATED();
+ 
+    public:
+-    explicit ContentBuilder(const mojom::blink::AIPageContentOptions& options);
++    explicit ContentBuilder(const mojom::blink::AIPageContentOptions& options,
++                            const AIPageContentAgent* agent);
+     ~ContentBuilder();
+ 
+     mojom::blink::AIPageContentPtr Build(LocalFrame& frame);
+@@ -220,6 +227,10 @@ class MODULES_EXPORT AIPageContentAgent final
+         interactive_dom_node_ids_;
+ 
+     const raw_ref<const mojom::blink::AIPageContentOptions> options_;
++    // Reference back to the owning agent so builder can update agent-scoped
++    // state (e.g. previous geometry samples). Use raw pointer since
++    // ContentBuilder is stack allocated and lifetime is bounded by agent call.
++    const AIPageContentAgent* agent_;
+ 
+     // Keyed by Node identity within a single extraction pass.
+     HeapHashMap<Member<const Node>, int32_t> dom_node_to_z_order_;
+@@ -242,8 +253,24 @@ class MODULES_EXPORT AIPageContentAgent final
+       receiver_set_;
+   // Already registered for lifetime notifications.
+   bool is_lifecycle_observer_registered_ = false;
+-  // Tasks to run when post lifecycle.
+-  Vector<base::OnceClosure> async_extraction_tasks_;
++    // Tasks to run when post lifecycle.
++    Vector<base::OnceClosure> async_extraction_tasks_;
++
++    // Stores the previous visible bounding-box and timestamp for recently
++    // observed DOM nodes so we can compute simple instantaneous velocity
++    // estimates (device pixels / second) between extraction calls. Mutable so
++    // it may be updated from const extraction entrypoints without changing the
++    // external API signatures.
++    mutable HashMap<int32_t, std::pair<gfx::Rect, base::TimeTicks>>
++            previous_node_geometries_;
++
++    // Guard to ensure we dump the native skeleton at most once per agent
++    // lifetime (resets when the agent is recreated for a new Document).
++    bool has_dumped_skeleton_ = false;
++
++    // Dumps a minimal JSON skeleton of semantic sections to stdout for native
++    // consumers. Runs on the Blink main thread and must be lightweight.
++    void DumpSkeletonNative();
+ 
+ #if DCHECK_IS_ON()
+   void ListenForDOMContentLoadedForAutoBuild();

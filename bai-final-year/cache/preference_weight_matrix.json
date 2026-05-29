@@ -1,0 +1,54 @@
+{
+  "alpha": 0.2,
+  "k": 3,
+  "wcss": 23.247372,
+  "section_ids": [
+    "hero",
+    "features",
+    "pricing",
+    "testimonials",
+    "cta",
+    "footer"
+  ],
+  "cohorts": [
+    {
+      "cluster_id": 0,
+      "sessions": 116,
+      "top_section": "testimonials",
+      "preference_weights": {
+        "hero": 0.088924,
+        "features": 0.106444,
+        "pricing": 0.15317,
+        "testimonials": 0.585008,
+        "cta": 0.047545,
+        "footer": 0.018909
+      }
+    },
+    {
+      "cluster_id": 1,
+      "sessions": 121,
+      "top_section": "features",
+      "preference_weights": {
+        "hero": 0.13823,
+        "features": 0.643526,
+        "pricing": 0.095429,
+        "testimonials": 0.076382,
+        "cta": 0.034156,
+        "footer": 0.012277
+      }
+    },
+    {
+      "cluster_id": 2,
+      "sessions": 123,
+      "top_section": "pricing",
+      "preference_weights": {
+        "hero": 0.036884,
+        "features": 0.093959,
+        "pricing": 0.6404,
+        "testimonials": 0.090961,
+        "cta": 0.122626,
+        "footer": 0.015171
+      }
+    }
+  ]
+}

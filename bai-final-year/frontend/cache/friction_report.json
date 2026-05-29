@@ -1,0 +1,46 @@
+{
+  "metric": "1D Kinematic Friction",
+  "formula": "F = |Y_target_center - Y_start_position|",
+  "y_start_position": 0.0,
+  "default_order": [
+    "hero",
+    "features",
+    "pricing",
+    "testimonials",
+    "cta",
+    "footer"
+  ],
+  "optimized_order": [
+    "pricing",
+    "features",
+    "testimonials",
+    "hero",
+    "cta",
+    "footer"
+  ],
+  "average_reduction_percent": 23.0,
+  "session_weighted_reduction_percent": 31.42,
+  "cohort_results": [
+    {
+      "cluster_id": 0,
+      "primary_target": "testimonials",
+      "default_friction_px": 1810.0,
+      "optimized_friction_px": 1390.0,
+      "reduction_percent": 23.2
+    },
+    {
+      "cluster_id": 1,
+      "primary_target": "features",
+      "default_friction_px": 680.0,
+      "optimized_friction_px": 880.0,
+      "reduction_percent": -29.41
+    },
+    {
+      "cluster_id": 2,
+      "primary_target": "pricing",
+      "default_friction_px": 1250.0,
+      "optimized_friction_px": 310.0,
+      "reduction_percent": 75.2
+    }
+  ]
+}

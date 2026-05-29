@@ -1,0 +1,46 @@
+FROM fedora:40
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    APP_HOME=/app \
+    BAI_CHROME_BINARY=/opt/bai/chromium/chrome \
+    BAI_USE_NATIVE_CHROME=auto \
+    FONTCONFIG_PATH=/etc/fonts \
+    XDG_CACHE_HOME=/tmp/bai-font-cache \
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+WORKDIR ${APP_HOME}
+
+# Fedora base keeps glibc close to the machine that built the custom Chromium.
+# Fonts and fontconfig cache are installed explicitly so headless layout
+# geometry remains stable in cloud containers.
+RUN dnf -y update && \
+    dnf -y install \
+      python3 python3-pip \
+      alsa-lib at-spi2-atk at-spi2-core atk cups-libs dbus-libs expat \
+      fontconfig freetype gtk3 libX11 libXcomposite libXcursor libXdamage \
+      libXext libXi libXrandr libXScrnSaver libXtst libdrm mesa-libgbm nss \
+      libxkbcommon mesa-libEGL mesa-libGL pango xorg-x11-fonts-Type1 \
+      liberation-fonts google-noto-sans-fonts google-noto-emoji-fonts \
+      ca-certificates curl shadow-utils && \
+    dnf clean all && \
+    mkdir -p /tmp/bai-font-cache /opt/bai/chromium && \
+    chmod 1777 /tmp/bai-font-cache && \
+    fc-cache -f -v
+
+COPY docker/requirements.txt /tmp/requirements.txt
+RUN python3 -m pip install --upgrade pip && \
+    python3 -m pip install -r /tmp/requirements.txt
+
+COPY runtime/chromium/ /opt/bai/chromium/
+COPY backend/ ${APP_HOME}/
+
+RUN test -x /opt/bai/chromium/chrome && \
+    useradd --create-home --shell /sbin/nologin bai && \
+    chown -R bai:bai ${APP_HOME} /opt/bai /tmp/bai-font-cache
+
+USER bai
+
+EXPOSE 8000
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

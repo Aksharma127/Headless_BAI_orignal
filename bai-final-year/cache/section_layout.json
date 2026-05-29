@@ -1,0 +1,50 @@
+{
+  "hero": {
+    "id": "hero",
+    "x": 0.0,
+    "y": 0.0,
+    "width": 1920.0,
+    "height": 420.0,
+    "center_y": 210.0
+  },
+  "features": {
+    "id": "features",
+    "x": 0.0,
+    "y": 420.0,
+    "width": 1920.0,
+    "height": 520.0,
+    "center_y": 680.0
+  },
+  "pricing": {
+    "id": "pricing",
+    "x": 0.0,
+    "y": 940.0,
+    "width": 1920.0,
+    "height": 620.0,
+    "center_y": 1250.0
+  },
+  "testimonials": {
+    "id": "testimonials",
+    "x": 0.0,
+    "y": 1560.0,
+    "width": 1920.0,
+    "height": 500.0,
+    "center_y": 1810.0
+  },
+  "cta": {
+    "id": "cta",
+    "x": 0.0,
+    "y": 2060.0,
+    "width": 1920.0,
+    "height": 340.0,
+    "center_y": 2230.0
+  },
+  "footer": {
+    "id": "footer",
+    "x": 0.0,
+    "y": 2400.0,
+    "width": 1920.0,
+    "height": 160.0,
+    "center_y": 2480.0
+  }
+}

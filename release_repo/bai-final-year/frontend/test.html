@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor.js Test Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .info-box {
+            background: white;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .clickable {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 30px;
+            margin: 15px 0;
+            cursor: pointer;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 18px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .clickable:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .clickable:active {
+            transform: translateY(0);
+        }
+        
+        .log {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #34495e;
+        }
+        
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #34495e;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #3498db;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            font-family: 'Courier New', monospace;
+        }
+        
+        button.action {
+            background: #27ae60;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: background 0.2s;
+        }
+        
+        button.action:hover {
+            background: #229954;
+        }
+        
+        .section-group {
+            margin: 30px 0;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Sensor.js Test Page</h1>
+    
+    <div class="info-box">
+        <strong>Instructions:</strong> Click around on the sections below to test the sensor.
+        Watch the console output below to see captured clicks.
+        Open DevTools (F12) to see more details.
+    </div>
+
+    <!-- Clickable sections -->
+    <div class="section-group">
+        <div class="section-title">📍 Test Sections (Click These)</div>
+        <div class="clickable">🎯 Section 1 - Click me</div>
+        <div class="clickable">🎯 Section 2 - Click me</div>
+        <div class="clickable">🎯 Section 3 - Click me</div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="section-group">
+        <div class="section-title">📊 Real-Time Statistics</div>
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Session ID</h3>
+                <div class="value" id="session-id">Loading...</div>
+            </div>
+            <div class="stat-card">
+                <h3>Buffered Clicks</h3>
+                <div class="value" id="buffered-clicks">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Viewport Size</h3>
+                <div class="value" id="viewport-size">Loading...</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Sent</h3>
+                <div class="value" id="total-sent">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="section-group">
+        <div class="section-title">🎮 Controls</div>
+        <button class="action" onclick="forceFlush()">Force Flush</button>
+        <button class="action" onclick="clearStats()">Clear Log</button>
+        <button class="action" onclick="simulateClicks()">Simulate 10 Clicks</button>
+    </div>
+
+    <!-- Console Output -->
+    <div class="section-group">
+        <div class="section-title">📝 Console Output</div>
+        <div class="log" id="output"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="sensor.js"></script>
+    <script>
+        let totalSent = 0;
+
+        // Override console.log to display in page
+        const output = document.getElementById('output');
+        const originalLog = console.log;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = '[' + new Date().toLocaleTimeString() + '] ' + args.join(' ');
+            output.appendChild(entry);
+            output.scrollTop = output.scrollHeight;
+        };
+
+        // Update statistics periodically
+        function updateStats() {
+            if (window.BAI_Sensor) {
+                const stats = window.BAI_Sensor.getStats();
+                
+                document.getElementById('session-id').textContent = 
+                    stats.sessionId ? stats.sessionId.substring(0, 8) + '...' : 'N/A';
+                
+                document.getElementById('buffered-clicks').textContent = 
+                    stats.bufferedClicks;
+                
+                document.getElementById('viewport-size').textContent = 
+                    `${stats.viewport.width}×${stats.viewport.height}`;
+                
+                document.getElementById('total-sent').textContent = totalSent;
+            }
+        }
+
+        // Force an immediate flush
+        function forceFlush() {
+            console.log('💥 Forcing flush...');
+            // Access the internal flush via a custom event
+            const event = new CustomEvent('bai-force-flush');
+            window.dispatchEvent(event);
+        }
+
+        // Clear the console log display
+        function clearStats() {
+            output.innerHTML = '';
+            console.log('✓ Log cleared');
+        }
+
+        // Simulate multiple clicks for testing
+        function simulateClicks() {
+            console.log('🤖 Simulating 10 clicks...');
+            for (let i = 0; i < 10; i++) {
+                const event = new MouseEvent('mousedown', {
+                    clientX: Math.random() * window.innerWidth,
+                    clientY: Math.random() * window.innerHeight,
+                    bubbles: true
+                });
+                document.dispatchEvent(event);
+            }
+        }
+
+        // Update stats every 500ms
+        setInterval(updateStats, 500);
+
+        // Initial update
+        updateStats();
+
+        console.log('✓ Test page ready!');
+    </script>
+</body>
+</html>

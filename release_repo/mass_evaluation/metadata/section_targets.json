@@ -1,0 +1,8 @@
+{
+  "_comment": "Section targets extracted by Step 2: 2_extract_targets.py",
+  "_structure": {
+    "site_001": ["hero", "features", "pricing", "testimonials", "footer"],
+    "site_002": ["header", "hero", "services", "contact"]
+  },
+  "_generated_at": "2026-05-17T00:00:00Z"
+}

@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.custom-chromium
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "False"
+      ENABLE_PHASE2_SCHEDULER: "true"
+      PHASE2_INTERVAL_MINUTES: "${PHASE2_INTERVAL_MINUTES:-2}"
+      SUPABASE_URL: "${SUPABASE_URL}"
+      SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}"
+      SUPABASE_SERVICE_KEY: "${SUPABASE_SERVICE_KEY}"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      BAI_CHROME_BINARY: /opt/bai/chromium/chrome
+      BAI_USE_NATIVE_CHROME: auto
+      BAI_CHROME_TIMEOUT_SECONDS: "${BAI_CHROME_TIMEOUT_SECONDS:-25}"
+      EXTRACTOR_LOCK_WAIT_SECONDS: "${EXTRACTOR_LOCK_WAIT_SECONDS:-90}"
+      EXTRACTOR_LOCK_TTL_SECONDS: "${EXTRACTOR_LOCK_TTL_SECONDS:-120}"
+      SKELETON_CACHE_TTL_SECONDS: "${SKELETON_CACHE_TTL_SECONDS:-86400}"
+      XDG_CACHE_HOME: /tmp/bai-font-cache
+      FONTCONFIG_PATH: /etc/fonts
+    depends_on:
+      redis:
+        condition: service_healthy
+    shm_size: "1gb"
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  redis_data:

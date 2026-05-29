@@ -1,0 +1,29 @@
+{
+  "format_version": "1.1",
+  "package_name": "infra/3pp/tools/gperf/linux-amd64",
+  "install_mode": "copy",
+  "actual_install_mode": "copy",
+  "files": [
+    {
+      "name": "bin/gperf",
+      "size": 498224,
+      "executable": true,
+      "hash": "nVI9lwrkgrfmmLiCp6b3IbE_54K_ifqCuMB1qw9NCqgC"
+    },
+    {
+      "name": "share/doc/gperf.html",
+      "size": 106261,
+      "hash": "igvPdF6XNnWar5loGLorHrbFoFwa86_1YH-Vx95gcJUC"
+    },
+    {
+      "name": "share/info/gperf.info",
+      "size": 100785,
+      "hash": "211bOZr-6Fx02j3aoaR73y6PIr2S5wkHyG0AnXIaGb8C"
+    },
+    {
+      "name": "share/man/man1/gperf.1",
+      "size": 7393,
+      "hash": "ZWuxcutBRPl-_aNXc1m0P5O8756QajVdQU-GOYSSViMC"
+    }
+  ]
+}

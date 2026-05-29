@@ -1,0 +1,40 @@
+# BAI Project Configuration
+# This file tracks project metadata for reference
+
+PROJECT_NAME="BAI: Behavior-Adaptive Interface"
+PHASE="1: Telemetry Collection & Ingestion"
+STATUS="Complete"
+DATE_CREATED="May 7-9, 2024"
+
+# Key Metrics
+TOTAL_FILES=21
+TOTAL_CODE_LINES=2000
+TOTAL_DOC_LINES=3000
+FRONTEND_SIZE=1500
+BACKEND_SIZE=350
+DATABASE_TABLES=4
+
+# Endpoints
+FRONTEND_URL="http://localhost:5000"
+BACKEND_URL="http://localhost:8000"
+API_DOCS="http://localhost:8000/docs"
+HEALTH_CHECK="http://localhost:8000/health"
+
+# Database
+DB_HOST="supabase.co"
+DB_TABLES=("sessions" "raw_events" "user_clusters" "layouts")
+
+# Key Files
+MAIN_SENSOR="frontend/sensor.js"
+MAIN_BACKEND="backend/main.py"
+MAIN_API="docs/API_SPECIFICATION.md"
+MAIN_DB="docs/DATABASE_SCHEMA.md"
+
+# Setup
+SETUP_TIME_MINUTES=30
+TEST_TIME_MINUTES=15
+TOTAL_TIME_HOURS=8
+
+# Next Phase
+NEXT_PHASE="Phase 2: Spatial Extraction (May 15)"
+NEXT_TECH="Playwright + Redis"

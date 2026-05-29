@@ -1,0 +1,213 @@
+# BAI Phase 1 - Complete File Listing
+
+## Frontend Files (4)
+
+frontend/sensor.js
+  └─ Core telemetry capture module
+  └─ Lines: 218
+  └─ Key functions: handleMouseDown, flush, generateUUID
+  └─ Exports: window.BAI_Sensor (for testing)
+
+frontend/test.html
+  └─ Interactive test page with real-time stats
+  └─ Lines: 195
+  └─ Features: Console display, stats panel, simulate buttons
+
+frontend/demo-website/index.html
+  └─ Landing page with 5 semantic sections
+  └─ Lines: 98
+  └─ Sections: hero, features, pricing, testimonials, cta
+
+frontend/demo-website/styles.css
+  └─ Professional responsive styling
+  └─ Lines: 350+
+  └─ Features: Gradients, hover effects, mobile responsive
+
+## Backend Files (2)
+
+backend/main.py
+  └─ FastAPI application and API implementation
+  └─ Lines: 330
+  └─ Endpoints: /health, /docs, /api/ingest, /api/stats
+  └─ Models: Interaction, ViewportInfo, IngestPayload
+
+backend/requirements.txt
+  └─ Python dependencies
+  └─ Packages: fastapi, uvicorn, pydantic, supabase, etc.
+
+## Docker & Config Files (5)
+
+docker-compose.yml
+  └─ Container orchestration
+  └─ Services: backend (8000), frontend (5000)
+  └─ Health checks configured
+
+docker/Dockerfile
+  └─ Backend container definition
+  └─ Base: python:3.11-slim
+  └─ Exposes: port 8000
+
+docker/requirements.txt
+  └─ Copy of backend/requirements.txt
+
+.env.example
+  └─ Environment template (NO secrets)
+  └─ Variables: SUPABASE_URL, SUPABASE_ANON_KEY, etc.
+
+.gitignore
+  └─ Git safety rules
+  └─ Excludes: .env, __pycache__, node_modules, etc.
+
+## Documentation Files (7)
+
+docs/ARCHITECTURE.md
+  └─ System design and data flow diagrams
+  └─ Lines: ~300
+  └─ Covers: Frontend, Backend, Database, Data Flow
+
+docs/API_SPECIFICATION.md
+  └─ Complete API reference
+  └─ Lines: ~350
+  └─ Includes: All 4 endpoints, error handling, examples
+
+docs/DATABASE_SCHEMA.md
+  └─ Database schema and SQL
+  └─ Lines: ~400
+  └─ Tables: sessions, raw_events, user_clusters, layouts
+
+docs/DEVELOPMENT_LOG.md
+  └─ Progress tracking template
+  └─ Lines: ~100
+  └─ Format: Daily entries with checkboxes
+
+README.md
+  └─ Project overview and quick start
+  └─ Lines: ~200
+  └─ Covers: Setup, structure, phases, troubleshooting
+
+TESTING_GUIDE.md
+  └─ Complete step-by-step testing walkthrough
+  └─ Lines: ~500
+  └─ Includes: Supabase setup, testing scenarios, debugging
+
+QUICK_START.txt
+  └─ Quick reference and checklists
+  └─ Lines: ~200
+  └─ Format: ASCII art, quick commands, pro tips
+
+PHASE1_SUMMARY.md
+  └─ Full technical summary of Phase 1
+  └─ Lines: ~400
+  └─ Covers: Deliverables, design decisions, metrics
+
+INDEX.md
+  └─ Master project index and reference
+  └─ Lines: ~400
+  └─ Navigation guide for all documentation
+
+## Configuration Files (3)
+
+setup.sh
+  └─ Git initialization script
+  └─ Initializes repo, creates initial commit
+
+start.sh
+  └─ Quick start script (runs backend + frontend)
+  └─ Handles: Process management, port checking
+
+create-tables.sh
+  └─ Database table creation helper
+  └─ Shows: SQL statements for manual creation
+
+## Metadata Files (2)
+
+.projectrc
+  └─ Project configuration and metadata
+  └─ Tracks: Phase, status, endpoints, file locations
+
+FILES.txt (this file)
+  └─ Complete file listing and descriptions
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SUMMARY BY CATEGORY:
+
+Code Files:       7 (4 frontend + 1 backend + 2 docker)
+Documentation:   7 (ARCH, API, DB, LOG, README, TEST, SUMMARY + INDEX)
+Config Files:    4 (.env, .gitignore, docker-compose, .projectrc)
+Scripts:         3 (setup, start, create-tables)
+Metadata:        2 (FILES.txt, QUICK_START.txt)
+
+TOTAL FILES:    23
+
+TOTAL LINES OF CODE:        ~2,000
+TOTAL LINES OF DOCS:        ~3,000
+TOTAL LINES OVERALL:        ~5,000
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CRITICAL FILES (START HERE):
+
+1. INDEX.md or QUICK_START.txt - Orientation
+2. TESTING_GUIDE.md - Setup and testing
+3. README.md - Project overview
+4. frontend/sensor.js - Core logic (read to understand)
+5. backend/main.py - API implementation (read to understand)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+KEY DIRECTORIES:
+
+bai-final-year/
+├── frontend/           - All frontend code
+├── backend/            - FastAPI server
+├── docker/             - Container files
+├── docs/               - Technical documentation
+
+═══════════════════════════════════════════════════════════════════════════════
+
+FILE DEPENDENCIES:
+
+.env
+  ↓
+backend/main.py ← requires SUPABASE credentials
+  ↓
+Supabase database ← requires tables from docs/DATABASE_SCHEMA.md
+
+frontend/sensor.js
+  ↓
+frontend/demo-website/index.html ← includes sensor.js
+  ↓
+Served by: python -m http.server
+
+═══════════════════════════════════════════════════════════════════════════════
+
+HOW TO UPDATE DOCUMENTATION:
+
+1. Daily progress: docs/DEVELOPMENT_LOG.md
+2. New findings: docs/ARCHITECTURE.md or API_SPECIFICATION.md
+3. Troubleshooting: TESTING_GUIDE.md § Troubleshooting
+4. High-level summary: PHASE1_SUMMARY.md
+5. Quick ref updates: QUICK_START.txt
+
+═══════════════════════════════════════════════════════════════════════════════
+
+NEXT PHASE (PHASE 2):
+
+New files to create:
+  - backend/playwright_extractor.py
+  - backend/redis_cache.py
+  - Playwright-based section extraction
+  - Coordinate mapping logic
+
+Update:
+  - backend/main.py (add new endpoints)
+  - docs/ARCHITECTURE.md (update diagram)
+  - docs/DEVELOPMENT_LOG.md (add Phase 2 entries)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+TOTAL PROJECT SIZE: ~6,000 lines (code + docs + config)
+STATUS: ✅ Phase 1 Complete
+READY FOR: Phase 2 (May 15)
+

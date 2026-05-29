@@ -1,0 +1,4 @@
+{
+  "subdir": "src/buildtools/third_party/mold/cipd",
+  "package_name": "chromium/buildtools/third_party/mold/mold"
+}

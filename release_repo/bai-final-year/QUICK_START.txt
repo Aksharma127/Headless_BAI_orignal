@@ -1,0 +1,299 @@
+#!/usr/bin/env bash
+# BAI Phase 1 Quick Reference
+# Run: cat QUICK_START.txt
+
+cat << 'EOF'
+
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║           🎯 BAI PHASE 1 - QUICK START REFERENCE              ║
+║                                                                ║
+║        Behavior-Adaptive Interface Telemetry Pipeline          ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+📦 WHAT YOU HAVE
+
+✅ Frontend
+   - sensor.js (218 lines) - Click capture + batch sending
+   - test.html (195 lines) - Interactive testing page
+   - demo-website/ - 5-section landing page for testing
+
+✅ Backend  
+   - main.py (330 lines) - FastAPI with Pydantic validation
+   - Endpoints: /health, /docs, /api/ingest, /api/stats
+
+✅ Database
+   - 4 Supabase tables: sessions, raw_events, user_clusters, layouts
+   - Proper schema with foreign keys and indexes
+
+✅ Documentation
+   - ARCHITECTURE.md - System design
+   - API_SPECIFICATION.md - Endpoint reference
+   - DATABASE_SCHEMA.md - Table definitions
+   - TESTING_GUIDE.md - Complete walkthrough
+
+═══════════════════════════════════════════════════════════════════
+
+⚡ QUICK START (5 MINUTES)
+
+Step 1: Supabase Setup
+  1. Go to https://supabase.com
+  2. Create new project (name: bai-mvp)
+  3. Get credentials from Settings → API
+  4. Copy .env.example → .env
+  5. Fill in SUPABASE_URL and SUPABASE_ANON_KEY
+
+Step 2: Create Database Tables
+  1. Go to Supabase SQL Editor
+  2. Copy-paste SQL from docs/DATABASE_SCHEMA.md
+  3. Run 4 CREATE TABLE statements
+  4. Create indexes
+
+Step 3: Start Backend
+  $ cd backend
+  $ pip install -r requirements.txt
+  $ python main.py
+  
+  Expected: "Connected to Supabase..."
+  Check: http://localhost:8000/health
+
+Step 4: Start Frontend
+  $ cd frontend/demo-website
+  $ python -m http.server 5000
+  
+  Expected: "Serving HTTP on port 5000"
+  Visit: http://localhost:5000
+
+Step 5: Test & Verify
+  1. Click around the website for 5 seconds
+  2. Wait for automatic flush
+  3. Go to Supabase dashboard
+  4. Check raw_events table - should have data!
+
+═══════════════════════════════════════════════════════════════════
+
+🔗 KEY URLS
+
+Frontend:        http://localhost:5000
+Backend Health:  http://localhost:8000/health
+API Docs:        http://localhost:8000/docs
+API Stats:       http://localhost:8000/api/stats
+Supabase:        https://app.supabase.com
+
+═══════════════════════════════════════════════════════════════════
+
+🎮 TESTING SCENARIOS
+
+Scenario 1: Single Click
+  1. Click once
+  2. Wait 5 seconds
+  3. Check console: should see "✓ Sent via fetch"
+  4. Check Supabase: should have 1 new row in raw_events
+
+Scenario 2: Batch Clicks
+  1. Rapidly click 10 times
+  2. Wait 5 seconds for automatic flush
+  3. Check console: should show "Sent via fetch: 10"
+  4. Check Supabase: should have 10 new rows
+
+Scenario 3: Session Persistence
+  1. Click and flush
+  2. Reload page (Ctrl+R)
+  3. Click and flush again
+  4. Check Supabase: all clicks should have SAME session_id
+
+Scenario 4: Tab Close Data Loss Prevention
+  1. Click several times
+  2. DON'T wait 5 seconds - immediately close tab
+  3. Check Supabase: data should still be saved (Beacon API)
+
+═══════════════════════════════════════════════════════════════════
+
+📊 EXPECTED DATA
+
+Sessions Table:
+  session_id: uuid-string
+  created_at: 2024-05-08T10:00:00
+  last_active: 2024-05-08T10:30:00
+
+Raw Events Table:
+  id: uuid
+  session_id: (same uuid from sessions)
+  section_id: NULL (filled in Phase 2)
+  viewport_w: 1920
+  viewport_h: 1080
+  ema_weight: 1.0
+  created_at: 2024-05-08T10:00:05
+
+═══════════════════════════════════════════════════════════════════
+
+🔍 DEBUGGING
+
+Backend won't start?
+  ✓ Check: echo $SUPABASE_URL
+  ✓ Check: .env file exists and has values
+  ✓ Try: pip install -r requirements.txt
+
+Frontend can't reach backend?
+  ✓ Check: Is backend running? (ps aux | grep main.py)
+  ✓ Check: Browser DevTools → Network → POST /api/ingest
+  ✓ Check: CORS error? (should be enabled in main.py)
+
+No data in Supabase?
+  ✓ Check: Did you create the tables?
+  ✓ Check: Backend logs - "Stored X interactions"?
+  ✓ Check: Table names exactly: sessions, raw_events
+
+═══════════════════════════════════════════════════════════════════
+
+📝 FILE REFERENCE
+
+Frontend Code:
+  frontend/sensor.js                 - Click capture logic
+  frontend/test.html                 - Testing page with stats
+  frontend/demo-website/index.html   - Website to test on
+  frontend/demo-website/styles.css   - Styling
+
+Backend Code:
+  backend/main.py                    - FastAPI application
+  backend/requirements.txt           - Dependencies
+
+Database:
+  docs/DATABASE_SCHEMA.md            - SQL statements
+
+Documentation:
+  README.md                          - Project overview
+  TESTING_GUIDE.md                   - Step-by-step guide
+  PHASE1_SUMMARY.md                  - This phase summary
+  ARCHITECTURE.md                    - System design
+  API_SPECIFICATION.md               - Endpoint reference
+  DATABASE_SCHEMA.md                 - Table definitions
+  DEVELOPMENT_LOG.md                 - Progress tracker
+
+═══════════════════════════════════════════════════════════════════
+
+✅ SUCCESS CRITERIA
+
+You're done when you see:
+
+1. Console Logs:
+   [BAI Sensor] ✓ Sensor initialized
+   [BAI Sensor] Click captured: {x: ..., y: ..., t: ...}
+   [BAI Sensor] ✓ Sent via fetch: N interactions
+
+2. Backend Logs:
+   ✓ Connected to Supabase: https://...
+   INFO: Uvicorn running on http://0.0.0.0:8000
+
+3. Supabase Data:
+   ✓ sessions table: 1+ rows
+   ✓ raw_events table: 50+ rows
+   ✓ Each raw_event has session_id, viewport_w, viewport_h
+
+4. API Health:
+   ✓ GET /health returns {"status": "ok"}
+   ✓ GET /api/stats returns {"total_sessions": N, "total_events": N}
+
+═══════════════════════════════════════════════════════════════════
+
+🚀 NEXT STEPS (PHASE 2)
+
+Phase 1 is complete! Phase 2 will add:
+
+- Playwright browser automation
+- Screenshot capture
+- Section bounding box extraction  
+- Click → Section mapping
+- Redis caching
+
+But first, commit your working Phase 1:
+
+  $ git add .
+  $ git commit -m "Phase 1: Complete telemetry pipeline"
+  $ git push origin main
+
+═══════════════════════════════════════════════════════════════════
+
+📚 DOCUMENTATION HIERARCHY
+
+Start here:        README.md
+Then read:         TESTING_GUIDE.md
+For architecture:  docs/ARCHITECTURE.md
+For API details:   docs/API_SPECIFICATION.md
+For database:      docs/DATABASE_SCHEMA.md
+For progress:      docs/DEVELOPMENT_LOG.md
+For full summary:  PHASE1_SUMMARY.md
+
+═══════════════════════════════════════════════════════════════════
+
+❓ COMMON QUESTIONS
+
+Q: How does sensor.js work?
+A: Captures clicks in mousedown event, buffers locally, sends batch
+   every 5 seconds to /api/ingest endpoint.
+
+Q: Why 5 seconds?
+A: Balances latency (real-time enough) with efficiency (reduces
+   network requests from 1000s to 200 batches).
+
+Q: What if user closes tab before 5-second flush?
+A: Beacon API ensures final data sent (fire-and-forget at OS level).
+
+Q: Where is click position stored?
+A: Currently just buffered and sent. Phase 2 maps it to section.
+   Full x,y coordinates not stored (privacy + storage efficiency).
+
+Q: How many clicks can it handle?
+A: 1000s per session, unlimited sessions. Indexes handle scale.
+
+Q: Is data secure?
+A: No encryption yet (will add HTTPS in production). API keys in
+   .env file are git-ignored. Never commit .env!
+
+═══════════════════════════════════════════════════════════════════
+
+💡 PRO TIPS
+
+1. Use Browser DevTools (F12) to watch network requests
+2. Check Supabase dashboard real-time via Refresh
+3. Use /docs endpoint to manually test API
+4. Look at browser console logs for sensor status
+5. Check backend terminal for storage confirmation
+
+═══════════════════════════════════════════════════════════════════
+
+🎓 LEARNING OBJECTIVES MET
+
+✅ Understand click capture on frontend
+✅ Understand batch processing + flushing
+✅ Understand HTTP API design
+✅ Understand data validation (Pydantic)
+✅ Understand database schema design
+✅ Understand CORS for cross-origin requests
+✅ Understand session management
+✅ Understand error handling
+
+═══════════════════════════════════════════════════════════════════
+
+Final Checklist Before Moving to Phase 2:
+
+□ Supabase project created
+□ .env file filled with credentials  
+□ Database tables created and verified
+□ Backend starts without errors
+□ Frontend loads at localhost:5000
+□ /health endpoint returns ok
+□ Clicks captured and logged in console
+□ Data flushed to Supabase every 5 seconds
+□ Supabase shows 50+ rows in raw_events
+□ Documentation reviewed
+□ Ready for Phase 2!
+
+═══════════════════════════════════════════════════════════════════
+
+Questions? Check TESTING_GUIDE.md Troubleshooting section!
+
+Good luck! 🚀
+
+EOF

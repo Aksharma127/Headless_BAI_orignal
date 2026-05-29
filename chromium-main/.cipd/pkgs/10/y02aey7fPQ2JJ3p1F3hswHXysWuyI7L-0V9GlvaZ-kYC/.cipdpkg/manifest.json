@@ -1,0 +1,14 @@
+{
+  "format_version": "1.1",
+  "package_name": "chromium/third_party/enterprise_companion/chromium_linux64",
+  "install_mode": "copy",
+  "actual_install_mode": "copy",
+  "files": [
+    {
+      "name": "enterprise_companion_test",
+      "size": 36388040,
+      "executable": true,
+      "hash": "0wenYLxi6EYumL3usnswh8Hsw2UxtGXqjXvy6C_IJR8C"
+    }
+  ]
+}

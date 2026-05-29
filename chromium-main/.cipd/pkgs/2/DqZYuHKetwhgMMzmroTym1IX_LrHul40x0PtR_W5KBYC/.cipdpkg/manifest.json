@@ -1,0 +1,44 @@
+{
+  "format_version": "1.1",
+  "package_name": "chromium/buildtools/third_party/mold/mold",
+  "install_mode": "copy",
+  "actual_install_mode": "copy",
+  "files": [
+    {
+      "name": "bin/ld.mold",
+      "size": 0,
+      "symlink": "mold"
+    },
+    {
+      "name": "bin/mold",
+      "size": 19606472,
+      "executable": true,
+      "hash": "gn26dtYLIVhIMn7qb0URUNyJ3YaZ1PQQ-0JFjOP_t1sC"
+    },
+    {
+      "name": "lib/mold/mold-wrapper.so",
+      "size": 14112,
+      "hash": "0Ia_11GbPEz-IRM2cYzUZ615KOWOr0q216WNDbRcOw4C"
+    },
+    {
+      "name": "libexec/mold/ld",
+      "size": 0,
+      "symlink": "../../bin/mold"
+    },
+    {
+      "name": "share/doc/mold/LICENSE",
+      "size": 1067,
+      "hash": "yYooWEab07IxyIZcW2X4D2_78l6FDV1XWWfj2e4IB1UC"
+    },
+    {
+      "name": "share/man/man1/ld.mold.1",
+      "size": 0,
+      "symlink": "mold.1"
+    },
+    {
+      "name": "share/man/man1/mold.1",
+      "size": 44003,
+      "hash": "LeZrHEpDZe0aohGL_ozlMEDkDz5bx01ckNs_5tsSQsMC"
+    }
+  ]
+}

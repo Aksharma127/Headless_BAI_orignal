@@ -1,0 +1,19 @@
+{
+  "format_version": "1.1",
+  "package_name": "infra/tools/luci/cas/linux-amd64",
+  "version_file": ".versions/cas.cipd_version",
+  "actual_install_mode": "copy",
+  "files": [
+    {
+      "name": "cas",
+      "size": 27314598,
+      "executable": true,
+      "hash": "ljWGPm6MEt8GWoMXNXHG5wLSgUJ4PDv5fT5fZGSf_9oC"
+    },
+    {
+      "name": ".versions/cas.cipd_version",
+      "size": 121,
+      "hash": "Ixrtnh6gkAxzOPRmHahyHNG3ht4-X00B3ymkPOlT_N4C"
+    }
+  ]
+}
