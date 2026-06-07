@@ -1,3 +1,4 @@
+# Its still under development as it needs some touch, I'll be back soon...
 # Headless BAI - Behavioral AI Pipeline
 
 A production-grade system for capturing user behavior, filtering bots, and optimizing UI layouts through intelligent clustering.
