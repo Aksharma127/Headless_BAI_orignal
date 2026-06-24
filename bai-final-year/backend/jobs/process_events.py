@@ -1,20 +1,46 @@
 import os
 import logging
 from typing import List, Dict
-import redis
-from supabase import create_client
-from ..filters.bot_detector import is_bot
-from ..extractors.playwright_extractor import get_skeleton
-from ..mappers.coordinate_mapper import map_click_to_section
 
 logger = logging.getLogger(__name__)
 
+# Lazy imports: these are heavy dependencies that may not be available in all
+# environments (e.g. CI with DEMO_MODE=true). Import failures are caught at
+# function call time, not at module import time, so the server can still boot.
 
-def _get_redis_client() -> redis.Redis:
+def _import_redis():
+    import redis
+    return redis
+
+def _import_bot_detector():
+    try:
+        from ..filters.bot_detector import is_bot
+    except ImportError:
+        from filters.bot_detector import is_bot
+    return is_bot
+
+def _import_extractor():
+    try:
+        from ..extractors.playwright_extractor import get_skeleton
+    except ImportError:
+        from extractors.playwright_extractor import get_skeleton
+    return get_skeleton
+
+def _import_mapper():
+    try:
+        from ..mappers.coordinate_mapper import map_click_to_section
+    except ImportError:
+        from mappers.coordinate_mapper import map_click_to_section
+    return map_click_to_section
+
+
+def _get_redis_client():
+    redis = _import_redis()
     return redis.Redis(host=os.getenv('REDIS_HOST', 'localhost'), port=int(os.getenv('REDIS_PORT', 6379)), db=0)
 
 
 def _get_supabase_client():
+    from supabase import create_client
     url = os.getenv('SUPABASE_URL')
     key = os.getenv('SUPABASE_ANON_KEY')
     if not url or not key:
@@ -63,6 +89,10 @@ def process_pending_events():
     except Exception:
         logger.exception("Phase 2 processing skipped because dependencies are unavailable")
         return
+
+    is_bot = _import_bot_detector()
+    get_skeleton = _import_extractor()
+    map_click_to_section = _import_mapper()
 
     events = get_pending_events(supabase_client)
     if not events:
