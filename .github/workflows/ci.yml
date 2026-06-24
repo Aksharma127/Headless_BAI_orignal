@@ -1,0 +1,134 @@
+name: CI — Headless BAI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    name: Backend Tests & Integration Smoke
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DEMO_MODE: "true"
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      PYTHONDONTWRITEBYTECODE: 1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: bai-final-year/backend/requirements.txt
+
+      - name: Install backend dependencies
+        working-directory: bai-final-year
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-html httpx
+
+      - name: Start FastAPI server (DEMO_MODE=true)
+        working-directory: bai-final-year
+        run: |
+          uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+          echo "Waiting for server to become ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ Server is ready (attempt $i)"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "❌ Server failed to start after 30 seconds"
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: "Integration: Verify /health endpoint"
+        run: |
+          response=$(curl -sf http://localhost:8000/health)
+          echo "Response: $response"
+          echo "$response" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          assert data['status'] == 'ok', f'Expected status=ok, got {data[\"status\"]}'
+          assert 'redis' in data, 'Missing redis field'
+          assert data['redis'] == 'connected', f'Redis should be connected, got {data[\"redis\"]}'
+          assert 'demo_mode' in data, 'Missing demo_mode field'
+          assert data['demo_mode'] is True, f'Expected demo_mode=true, got {data[\"demo_mode\"]}'
+          assert 'timestamp' in data, 'Missing timestamp field'
+          print('✅ /health — status=ok, redis=connected, demo_mode=true')
+          "
+
+      - name: "Integration: Verify /api/layout response schema"
+        run: |
+          response=$(curl -sf http://localhost:8000/api/layout)
+          echo "Response: $response" | head -c 500
+          echo ""
+          echo "$response" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+
+          # Required top-level fields
+          assert 'layout_order' in data, 'Missing layout_order'
+          assert isinstance(data['layout_order'], list), 'layout_order must be a list'
+          assert len(data['layout_order']) > 0, 'layout_order is empty'
+
+          assert 'source' in data, 'Missing source field'
+          assert data['source'] in ('cache', 'live_ml', 'cache_fallback'), \
+              f'Unexpected source: {data[\"source\"]}'
+
+          assert 'section_layout' in data, 'Missing section_layout'
+          assert isinstance(data['section_layout'], dict), 'section_layout must be a dict'
+
+          assert 'friction_report' in data, 'Missing friction_report'
+
+          assert 'timestamp' in data, 'Missing timestamp'
+
+          # Validate section_layout entries have geometry
+          for section_id, geom in data['section_layout'].items():
+              for field in ('id', 'x', 'y', 'width', 'height'):
+                  assert field in geom, f'Section {section_id} missing {field}'
+
+          # Validate layout_order contains known section names
+          known = set(data['section_layout'].keys())
+          for section in data['layout_order']:
+              assert section in known, f'layout_order contains unknown section: {section}'
+
+          print(f'✅ /api/layout — {len(data[\"layout_order\"])} sections, source={data[\"source\"]}')
+          "
+
+      - name: Run pytest unit tests
+        working-directory: bai-final-year
+        run: |
+          python -m pytest tests/ -v \
+            --tb=short \
+            --html=test-report.html \
+            --self-contained-html
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-report
+          path: bai-final-year/test-report.html
+          retention-days: 30
